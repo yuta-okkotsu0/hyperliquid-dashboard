@@ -136,7 +136,7 @@ export function Analytics() {
   // Risk Dashboard Calculations
   const riskMetrics = (() => {
     const positions = positionsData?.data || [];
-    const equityData = performance?.totalPnl || 0;
+    const snapshots = equityData?.data || [];
     const openPositions = positions.filter(p => p.status === 'OPEN');
     
     // Total position size
@@ -163,7 +163,6 @@ export function Analytics() {
     
     // Value at Risk (simplified - 95% confidence, assumes normal distribution)
     // Using daily returns from equity data
-    const snapshots = equityData?.data || [];
     let var95 = 0;
     if (snapshots.length > 1) {
       const returns: number[] = [];
