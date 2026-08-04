@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { formatCurrency, formatPercent, cn } from '../lib/utils';
-import { TrendingUp, TrendingDown, Target, Activity, BarChart2, PieChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Activity, BarChart2, PieChart, AlertTriangle, Scale, Zap } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
 function MetricCard({ 
@@ -133,6 +133,62 @@ export function Analytics() {
     return data.sort((a, b) => b.value - a.value).slice(0, 5);
   })();
 
+  // Risk Dashboard Calculations
+  const riskMetrics = (() => {
+    const positions = positionsData?.data || [];
+    const equityData = performance?.totalPnl || 0;
+    const openPositions = positions.filter(p => p.status === 'OPEN');
+    
+    // Total position size
+    const totalPositionSize = openPositions.reduce((sum, p) => 
+      sum + (p.size * p.markPrice), 0
+    );
+    
+    // Position concentration (largest position % of total)
+    const largestPosition = openPositions.length > 0 
+      ? openPositions.reduce((max, p) => {
+          const size = p.size * p.markPrice;
+          return size > (max?.size || 0) ? { coin: p.coin, size } : max;
+        }, null as { coin: string; size: number } | null)
+      : null;
+    
+    const concentration = totalPositionSize > 0 && largestPosition
+      ? (largestPosition.size / totalPositionSize) * 100
+      : 0;
+    
+    // Average leverage
+    const avgLeverage = openPositions.length > 0
+      ? openPositions.reduce((sum, p) => sum + p.leverage, 0) / openPositions.length
+      : 0;
+    
+    // Value at Risk (simplified - 95% confidence, assumes normal distribution)
+    // Using daily returns from equity data
+    const snapshots = equityData?.data || [];
+    let var95 = 0;
+    if (snapshots.length > 1) {
+      const returns: number[] = [];
+      for (let i = 1; i < snapshots.length; i++) {
+        const ret = (snapshots[i].totalEquity - snapshots[i-1].totalEquity) / snapshots[i-1].totalEquity;
+        returns.push(ret);
+      }
+      const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+      const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / returns.length;
+      const stdDev = Math.sqrt(variance);
+      // 95% VaR = mean - 1.645 * stdDev
+      const totalEquity = snapshots[snapshots.length - 1]?.totalEquity || 1;
+      var95 = Math.abs((mean - 1.645 * stdDev) * totalEquity);
+    }
+    
+    return {
+      totalPositionSize,
+      concentration,
+      largestPosition,
+      avgLeverage,
+      var95,
+      openPositionCount: openPositions.length,
+    };
+  })();
+
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
@@ -182,6 +238,75 @@ export function Analytics() {
           icon={TrendingDown}
           trend="down"
         />
+      </div>
+
+      {/* Risk Dashboard */}
+      <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="text-yellow-500" size={20} />
+          <h2 className="text-lg font-semibold">Risk Dashboard</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 bg-secondary/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+              <Scale size={16} />
+              <span>Position Concentration</span>
+            </div>
+            <p className={cn(
+              'text-2xl font-bold',
+              riskMetrics.concentration > 50 ? 'text-red-500' : 
+              riskMetrics.concentration > 30 ? 'text-yellow-500' : 'text-green-500'
+            )}>
+              {riskMetrics.concentration.toFixed(1)}%
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {riskMetrics.largestPosition?.coin || 'None'} is largest
+            </p>
+          </div>
+          
+          <div className="p-4 bg-secondary/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+              <Zap size={16} />
+              <span>Avg Leverage</span>
+            </div>
+            <p className={cn(
+              'text-2xl font-bold',
+              riskMetrics.avgLeverage > 10 ? 'text-red-500' :
+              riskMetrics.avgLeverage > 5 ? 'text-yellow-500' : 'text-green-500'
+            )}>
+              {riskMetrics.avgLeverage.toFixed(1)}x
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Across {riskMetrics.openPositionCount} open positions
+            </p>
+          </div>
+          
+          <div className="p-4 bg-secondary/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+              <AlertTriangle size={16} />
+              <span>Value at Risk (95%)</span>
+            </div>
+            <p className="text-2xl font-bold">
+              {formatCurrency(riskMetrics.var95)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Potential daily loss
+            </p>
+          </div>
+          
+          <div className="p-4 bg-secondary/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+              <BarChart2 size={16} />
+              <span>Total Exposure</span>
+            </div>
+            <p className="text-2xl font-bold">
+              {formatCurrency(riskMetrics.totalPositionSize)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Notional position size
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Trade Statistics */}

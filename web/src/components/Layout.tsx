@@ -7,10 +7,13 @@ import {
   Brain, 
   ScrollText,
   Menu,
-  X
+  X,
+  Settings,
+  Radio
 } from 'lucide-react';
-import { useState } from 'react';
-import { cn } from '../lib/utils';
+import { useState, useEffect } from 'react';
+import { cn, formatDuration } from '../lib/utils';
+import { useLiveUpdates } from '../hooks/useLiveUpdates';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -19,6 +22,7 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Reasoning', href: '/reasoning', icon: Brain },
   { name: 'Logs', href: '/logs', icon: ScrollText },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 interface LayoutProps {
@@ -27,6 +31,25 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isConnected, lastUpdate } = useLiveUpdates();
+  const [timeAgo, setTimeAgo] = useState('');
+
+  // Update time ago every second
+  useEffect(() => {
+    if (!lastUpdate) return;
+    
+    const updateTime = () => {
+      const seconds = Math.floor((Date.now() - lastUpdate.getTime()) / 1000);
+      if (seconds < 5) setTimeAgo('just now');
+      else if (seconds < 60) setTimeAgo(`${seconds}s ago`);
+      else if (seconds < 3600) setTimeAgo(`${Math.floor(seconds / 60)}m ago`);
+      else setTimeAgo(`${Math.floor(seconds / 3600)}h ago`);
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [lastUpdate]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,7 +102,28 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Footer */}
             <div className="p-4 border-t border-border text-xs text-muted-foreground">
-              <p>Trading Dashboard v1.2</p>
+              <div className="flex items-center justify-between mb-2">
+                <span>Trading Dashboard v1.3</span>
+                <div className="flex items-center gap-1.5">
+                  <Radio 
+                    size={12} 
+                    className={cn(
+                      'transition-colors',
+                      isConnected ? 'text-green-500' : 'text-red-500'
+                    )} 
+                  />
+                  <span className={cn(
+                    isConnected ? 'text-green-500' : 'text-red-500'
+                  )}>
+                    {isConnected ? 'LIVE' : 'OFFLINE'}
+                  </span>
+                </div>
+              </div>
+              {lastUpdate && (
+                <p className="text-[10px] opacity-70">
+                  Updated: {timeAgo}
+                </p>
+              )}
               <p className="mt-1">Read-only monitoring</p>
             </div>
           </div>

@@ -1,4 +1,6 @@
 import { FastifyInstance } from 'fastify';
+import { db, accountSnapshots, trades, positions } from '../db/index.js';
+import { desc, sql } from 'drizzle-orm';
 
 // Store connected clients
 const clients = new Set<any>();
@@ -12,6 +14,53 @@ export function broadcast(data: any) {
       clients.delete(client);
     }
   });
+}
+
+// Broadcast latest data to all connected clients
+export async function broadcastUpdate() {
+  try {
+    // Get latest balance
+    const latestSnapshot = await db.select().from(accountSnapshots).orderBy(desc(accountSnapshots.timestamp)).limit(1);
+    const balance = latestSnapshot[0];
+
+    // Get recent trades
+    const recentTrades = await db.select().from(trades).orderBy(desc(trades.timestamp)).limit(5);
+
+    // Get open positions
+    const openPositions = await db.select().from(positions).where(sql`${positions.status} = 'OPEN'`);
+
+    // Get performance metrics
+    const allTrades = await db.select().from(trades);
+    const winningTrades = allTrades.filter(t => (t.pnl || 0) > 0);
+    const totalPnl = allTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+    broadcast({
+      type: 'update',
+      timestamp: new Date().toISOString(),
+      data: {
+        balance: balance ? {
+          totalEquity: balance.totalEquity,
+          availableBalance: balance.availableBalance,
+          unrealizedPnl: balance.unrealizedPnl,
+          realizedPnl24h: balance.realizedPnl24h,
+        } : null,
+        positions: {
+          count: openPositions.length,
+          unrealizedPnl: openPositions.reduce((sum, p) => sum + p.unrealizedPnl, 0),
+        },
+        trades: {
+          recent: recentTrades,
+          totalCount: allTrades.length,
+          winRate: allTrades.length > 0 ? winningTrades.length / allTrades.length : 0,
+        },
+        performance: {
+          totalPnl,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('Error broadcasting update:', err);
+  }
 }
 
 export default async function routes(app: FastifyInstance) {

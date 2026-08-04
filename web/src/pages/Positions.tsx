@@ -2,11 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { formatCurrency, formatNumber, cn, formatDuration } from '../lib/utils';
 import { useState } from 'react';
+import { PositionModal } from '../components/PositionModal';
 
 type StatusFilter = 'all' | 'open' | 'closed';
 
 export function Positions() {
   const [status, setStatus] = useState<StatusFilter>('all');
+  const [selectedPosition, setSelectedPosition] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const { data } = useQuery({
     queryKey: ['positions', status],
@@ -14,6 +17,11 @@ export function Positions() {
   });
 
   const positions = data?.data || [];
+
+  const handleRowClick = (position: any) => {
+    setSelectedPosition(position);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -55,7 +63,11 @@ export function Positions() {
             </thead>
             <tbody>
               {positions.map((position) => (
-                <tr key={position.id} className="border-b border-border/50 last:border-0 hover:bg-secondary/30">
+                <tr 
+                  key={position.id} 
+                  className="border-b border-border/50 last:border-0 hover:bg-secondary/30 cursor-pointer"
+                  onClick={() => handleRowClick(position)}
+                >
                   <td className="py-3 px-4 font-medium">{position.coin}</td>
                   <td className="py-3 px-4">
                     <span className={cn(
@@ -99,6 +111,12 @@ export function Positions() {
           </div>
         )}
       </div>
+
+      <PositionModal
+        position={selectedPosition}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

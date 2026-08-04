@@ -6,6 +6,7 @@ import { Trades } from './pages/Trades';
 import { Analytics } from './pages/Analytics';
 import { Reasoning } from './pages/Reasoning';
 import { Logs } from './pages/Logs';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/reasoning" element={<Reasoning />} />
         <Route path="/logs" element={<Logs />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>
   );

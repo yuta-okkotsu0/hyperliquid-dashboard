@@ -11,7 +11,7 @@ import analyticsRoutes from './routes/analytics.js';
 import reasoningRoutes from './routes/reasoning.js';
 import logsRoutes from './routes/logs.js';
 import statusRoutes from './routes/status.js';
-import streamRoutes from './routes/stream.js';
+import streamRoutes, { broadcastUpdate } from './routes/stream.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
@@ -70,6 +70,12 @@ try {
   const port = parseInt(process.env.PORT || '3001');
   await app.listen({ port, host: '0.0.0.0' });
   app.log.info(`Server running on http://localhost:${port}`);
+  
+  // Start periodic broadcast for real-time updates (every 5 seconds)
+  setInterval(() => {
+    broadcastUpdate();
+  }, 5000);
+  app.log.info('Real-time updates enabled (5s interval)');
 } catch (err) {
   app.log.error(err);
   process.exit(1);

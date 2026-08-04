@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { formatCurrency, formatPercent, formatNumber } from '../lib/utils';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar, Trophy, AlertTriangle, TrendingDown as DrawdownIcon } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine } from 'recharts';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
+import { PnLCalendar } from '../components/PnLCalendar';
 
 const iconGlowClass = "drop-shadow-[0_0_8px_hsl(217,100%,50%)]";
 
@@ -90,8 +91,42 @@ export function Dashboard() {
 
   const chartData = equityData?.data.map(d => ({
     timestamp: new Date(d.timestamp).toLocaleDateString(),
+    fullDate: new Date(d.timestamp),
     equity: d.totalEquity,
   })).reverse() || [];
+
+  // Match trades to chart data points for markers
+  const tradeMarkers = (() => {
+    const markers: Array<{
+      index: number;
+      equity: number;
+      timestamp: string;
+      trade: typeof trades[0];
+      type: 'entry' | 'exit';
+    }> = [];
+    
+    trades.forEach(trade => {
+      const tradeDate = new Date(trade.timestamp);
+      // Find closest chart point
+      const closestIndex = chartData.findIndex((d, i) => {
+        const next = chartData[i + 1];
+        if (!next) return true;
+        return tradeDate >= d.fullDate && tradeDate < next.fullDate;
+      });
+      
+      if (closestIndex >= 0) {
+        markers.push({
+          index: closestIndex,
+          equity: chartData[closestIndex].equity,
+          timestamp: chartData[closestIndex].timestamp,
+          trade,
+          type: trade.pnl !== undefined ? 'exit' : 'entry',
+        });
+      }
+    });
+    
+    return markers;
+  })();
 
   const openPositions = positionsData?.data || [];
   const totalUnrealizedPnl = openPositions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
@@ -191,7 +226,19 @@ export function Dashboard() {
 
       {/* Equity Chart */}
       <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
-        <h2 className="text-lg font-semibold mb-4">Equity Curve</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Equity Curve</h2>
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-muted-foreground">Entry</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-muted-foreground">Exit</span>
+            </div>
+          </div>
+        </div>
         <div className="h-64 lg:h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
@@ -244,10 +291,24 @@ export function Dashboard() {
                 strokeWidth={2}
                 fill="url(#equityGradient)"
               />
+              {/* Trade markers */}
+              {tradeMarkers.map((marker, i) => (
+                <ReferenceDot
+                  key={`trade-${i}`}
+                  x={marker.timestamp}
+                  y={marker.equity}
+                  r={4}
+                  fill={marker.type === 'entry' ? '#10b981' : '#ef4444'}
+                  stroke="none"
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* P&L Calendar */}
+      <PnLCalendar />
 
       {/* Open Positions Preview */}
       <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
