@@ -74,7 +74,7 @@ export function Dashboard() {
   const chartData = equityData?.data.map(d => ({
     timestamp: new Date(d.timestamp).toLocaleDateString(),
     equity: d.totalEquity,
-  })) || [];
+  })).reverse() || [];
 
   const openPositions = positionsData?.data || [];
   const totalUnrealizedPnl = openPositions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
