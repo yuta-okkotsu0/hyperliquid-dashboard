@@ -180,7 +180,7 @@ async function generateMockData() {
       id: uuidv4(),
       timestamp: new Date(thirtyDaysAgo.getTime() + Math.random() * 30 * 24 * 60 * 60 * 1000),
       level: logTemplate.level as 'INFO' | 'WARN' | 'ERROR',
-      source: Math.random() > 0.3 ? 'BOT' : 'SYSTEM',
+      source: (Math.random() > 0.3 ? 'BOT' : 'SYSTEM') as 'BOT' | 'SYSTEM',
       message: logTemplate.message,
     });
   }

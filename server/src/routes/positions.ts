@@ -7,15 +7,9 @@ export default async function routes(app: FastifyInstance) {
   app.get('/', async (request) => {
     const { status } = request.query as { status?: string };
     
-    let query = db.select().from(positions).orderBy(desc(positions.openedAt));
-    
-    if (status === 'open') {
-      query = query.where(eq(positions.status, 'OPEN'));
-    } else if (status === 'closed') {
-      query = query.where(eq(positions.status, 'CLOSED'));
-    }
-    
-    const results = await query;
+    const results = await db.select().from(positions)
+      .where(status === 'open' ? eq(positions.status, 'OPEN') : status === 'closed' ? eq(positions.status, 'CLOSED') : undefined)
+      .orderBy(desc(positions.openedAt));
     
     return {
       data: results.map(p => ({
@@ -44,7 +38,7 @@ export default async function routes(app: FastifyInstance) {
     });
     
     if (!position) {
-      return app.httpErrors.notFound('Position not found');
+      return { error: 'Position not found' };
     }
     
     return {

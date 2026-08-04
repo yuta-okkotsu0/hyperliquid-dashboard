@@ -1,5 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { db } from './db/index.js';
 import accountRoutes from './routes/account.js';
 import positionsRoutes from './routes/positions.js';
@@ -9,6 +12,9 @@ import reasoningRoutes from './routes/reasoning.js';
 import logsRoutes from './routes/logs.js';
 import statusRoutes from './routes/status.js';
 import streamRoutes from './routes/stream.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const isDev = process.env.NODE_ENV === 'development';
 
 const app = Fastify({
   logger: {
@@ -23,10 +29,12 @@ const app = Fastify({
 });
 
 // Register plugins
-await app.register(cors, {
-  origin: true,
-  credentials: true,
-});
+if (isDev) {
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+  });
+}
 
 // Register routes
 await app.register(accountRoutes, { prefix: '/api/account' });
@@ -42,6 +50,20 @@ await app.register(streamRoutes, { prefix: '/api/stream' });
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
+
+// Serve static files in production
+if (!isDev) {
+  await app.register(fastifyStatic, {
+    root: join(__dirname, '../../web/dist'),
+    prefix: '/',
+    wildcard: false,
+  });
+
+  // Fallback for SPA routing
+  app.get('/*', async (request, reply) => {
+    return reply.sendFile('index.html');
+  });
+}
 
 // Start server
 try {

@@ -83,4 +83,6 @@ export interface PerformanceMetrics {
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
+  expectancy: number;
+  totalPnl: number;
 }

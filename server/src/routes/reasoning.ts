@@ -49,7 +49,7 @@ export default async function routes(app: FastifyInstance) {
     });
     
     if (!reasoning) {
-      return app.httpErrors.notFound('Reasoning not found');
+      return { error: 'Reasoning not found' };
     }
     
     return {
