@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../lib/api';
+
 import { cn } from '../lib/utils';
 import { 
   Monitor, 
@@ -8,7 +8,6 @@ import {
   Database, 
   Wifi,
   Check,
-  X,
   RefreshCw
 } from 'lucide-react';
 

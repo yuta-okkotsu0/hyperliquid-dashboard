@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { formatCurrency, formatPercent, formatNumber } from '../lib/utils';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar, Trophy, AlertTriangle, TrendingDown as DrawdownIcon } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { PnLCalendar } from '../components/PnLCalendar';
@@ -95,6 +95,8 @@ export function Dashboard() {
     equity: d.totalEquity,
   })).reverse() || [];
 
+  const trades = tradesData?.data || [];
+
   // Match trades to chart data points for markers
   const tradeMarkers = (() => {
     const markers: Array<{
@@ -136,7 +138,6 @@ export function Dashboard() {
   const equityChange = startEquity > 0 ? (currentEquity - startEquity) / startEquity : 0;
 
   // Calculate additional stats
-  const trades = tradesData?.data || [];
   const closedTrades = trades.filter(t => t.pnl !== undefined);
   const bestTrade = closedTrades.length > 0 ? closedTrades.reduce((max, t) => (t.pnl || 0) > (max.pnl || 0) ? t : max, closedTrades[0]) : null;
   const worstTrade = closedTrades.length > 0 ? closedTrades.reduce((min, t) => (t.pnl || 0) < (min.pnl || 0) ? t : min, closedTrades[0]) : null;

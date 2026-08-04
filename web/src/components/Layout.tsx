@@ -12,7 +12,7 @@ import {
   Radio
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { cn, formatDuration } from '../lib/utils';
+import { cn } from '../lib/utils';
 import { useLiveUpdates } from '../hooks/useLiveUpdates';
 
 const navigation = [

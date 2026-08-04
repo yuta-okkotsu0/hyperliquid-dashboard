@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { formatCurrency, formatNumber, formatDate, cn, formatDuration } from '../lib/utils';
-import { X, TrendingUp, TrendingDown, Clock, DollarSign, Target, BarChart3 } from 'lucide-react';
+import { Clock, DollarSign, Target, BarChart3 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
