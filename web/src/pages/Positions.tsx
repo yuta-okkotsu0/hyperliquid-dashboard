@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { formatCurrency, formatNumber, formatDate, cn, formatDuration } from '../lib/utils';
+import { formatCurrency, formatNumber, cn, formatDuration } from '../lib/utils';
 import { useState } from 'react';
 
 type StatusFilter = 'all' | 'open' | 'closed';

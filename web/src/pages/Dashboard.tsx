@@ -77,7 +77,8 @@ export function Dashboard() {
     queryFn: () => api.positions.list('open'),
   });
   
-  const { data: performanceData } = useQuery({
+  // Note: performanceData not currently used but kept for future stats
+  useQuery({
     queryKey: ['analytics', 'performance'],
     queryFn: () => api.analytics.performance(),
   });
@@ -219,7 +220,7 @@ export function Dashboard() {
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '6px',
                 }}
-                formatter={(value: number, name: string, props: any) => {
+                formatter={(value: number, _name: string, _props: any) => {
                   const equity = value as number;
                   const pnlPercent = startEquity > 0 ? ((equity - startEquity) / startEquity) : 0;
                   return [

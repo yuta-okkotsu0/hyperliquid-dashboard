@@ -275,7 +275,7 @@ export function Analytics() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {assetBreakdown.map((entry, index) => (
+                    {assetBreakdown.map((_entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
                         fill={COLORS[index % COLORS.length]} 
@@ -288,7 +288,7 @@ export function Analytics() {
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '6px',
                     }}
-                    formatter={(value: number, name: string, props: any) => [
+                    formatter={(_value: number, _name: string, props: any) => [
                       formatCurrency(props.payload.pnl),
                       props.payload.name
                     ]}
