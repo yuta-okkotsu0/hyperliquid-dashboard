@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { formatCurrency, formatNumber, formatDate, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, formatDate, cn, formatDuration } from '../lib/utils';
 import { useState } from 'react';
 
 type StatusFilter = 'all' | 'open' | 'closed';
@@ -49,7 +49,7 @@ export function Positions() {
                 <th className="text-right py-3 px-4 font-medium text-muted-foreground">Entry Price</th>
                 <th className="text-right py-3 px-4 font-medium text-muted-foreground">Mark Price</th>
                 <th className="text-right py-3 px-4 font-medium text-muted-foreground">P&L</th>
-                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Opened</th>
+                <th className="text-left py-3 px-4 font-medium text-muted-foreground">Duration</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground">Status</th>
               </tr>
             </thead>
@@ -77,7 +77,7 @@ export function Positions() {
                   )}>
                     {formatCurrency(position.unrealizedPnl)}
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground">{formatDate(position.openedAt)}</td>
+                  <td className="py-3 px-4 text-muted-foreground">{formatDuration(position.openedAt, position.closedAt)}</td>
                   <td className="py-3 px-4">
                     <span className={cn(
                       'px-2 py-1 rounded text-xs font-medium',

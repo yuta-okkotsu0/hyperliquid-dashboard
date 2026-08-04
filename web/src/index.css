@@ -34,7 +34,36 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: 
+      linear-gradient(rgba(30, 64, 175, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30, 64, 175, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
   }
+}
+
+/* Glow effects for primary elements */
+.glow-primary {
+  box-shadow: 0 0 20px hsl(217 100% 50% / 0.3), 0 0 40px hsl(217 100% 50% / 0.1);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px hsl(217 100% 50% / 0.5);
+}
+
+/* Button hover glow */
+button.bg-primary:hover {
+  box-shadow: 0 0 15px hsl(217 100% 50% / 0.4), 0 0 30px hsl(217 100% 50% / 0.2);
+}
+
+/* Card hover effect */
+.bg-card:hover {
+  box-shadow: 0 0 20px hsl(217 100% 50% / 0.1);
+}
+
+/* Active nav item glow */
+nav a[data-active="true"],
+nav a.bg-primary {
+  box-shadow: 0 0 15px hsl(217 100% 50% / 0.3);
 }
 
 /* Custom scrollbar for black & blue theme */

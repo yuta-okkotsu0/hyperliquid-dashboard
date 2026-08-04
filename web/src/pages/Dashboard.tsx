@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { formatCurrency, formatPercent, formatNumber } from '../lib/utils';
-import { TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar, Trophy, AlertTriangle, TrendingDown as DrawdownIcon } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
+
+const iconGlowClass = "drop-shadow-[0_0_8px_hsl(217,100%,50%)]";
 
 const periods = [
   { label: '1D', value: '1d' },
@@ -17,15 +19,24 @@ function StatCard({
   title, 
   value, 
   change, 
-  icon: Icon 
+  icon: Icon,
+  variant = 'default'
 }: { 
   title: string; 
   value: string; 
   change?: number; 
   icon: React.ElementType;
+  variant?: 'default' | 'success' | 'danger' | 'warning';
 }) {
+  const iconColors = {
+    default: 'text-muted-foreground',
+    success: 'text-green-500',
+    danger: 'text-red-500',
+    warning: 'text-yellow-500'
+  };
+  
   return (
-    <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
+    <div className="bg-card rounded-lg border border-border p-4 lg:p-6 hover:border-primary/50 transition-colors">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -41,7 +52,7 @@ function StatCard({
           )}
         </div>
         <div className="p-3 bg-secondary rounded-lg">
-          <Icon size={24} className="text-muted-foreground" />
+          <Icon size={24} className={cn(iconColors[variant], iconGlowClass)} />
         </div>
       </div>
     </div>
@@ -71,6 +82,11 @@ export function Dashboard() {
     queryFn: () => api.analytics.performance(),
   });
 
+  const { data: tradesData } = useQuery({
+    queryKey: ['trades', 'all'],
+    queryFn: () => api.trades.list({ limit: 1000 }),
+  });
+
   const chartData = equityData?.data.map(d => ({
     timestamp: new Date(d.timestamp).toLocaleDateString(),
     equity: d.totalEquity,
@@ -82,6 +98,26 @@ export function Dashboard() {
   const currentEquity = balanceData?.totalEquity || 0;
   const startEquity = chartData[0]?.equity || currentEquity;
   const equityChange = startEquity > 0 ? (currentEquity - startEquity) / startEquity : 0;
+
+  // Calculate additional stats
+  const trades = tradesData?.data || [];
+  const closedTrades = trades.filter(t => t.pnl !== undefined);
+  const bestTrade = closedTrades.length > 0 ? closedTrades.reduce((max, t) => (t.pnl || 0) > (max.pnl || 0) ? t : max, closedTrades[0]) : null;
+  const worstTrade = closedTrades.length > 0 ? closedTrades.reduce((min, t) => (t.pnl || 0) < (min.pnl || 0) ? t : min, closedTrades[0]) : null;
+  
+  // Calculate current drawdown from equity curve
+  let currentDrawdown = 0;
+  if (chartData.length > 0) {
+    let peak = chartData[0].equity;
+    for (const point of chartData) {
+      if (point.equity > peak) peak = point.equity;
+    }
+    const current = chartData[chartData.length - 1].equity;
+    currentDrawdown = peak > 0 ? (peak - current) / peak : 0;
+  }
+  
+  // Today's P&L (last 24h realized)
+  const todayPnl = balanceData?.realizedPnl24h || 0;
 
   return (
     <div className="space-y-6">
@@ -115,20 +151,40 @@ export function Dashboard() {
           icon={DollarSign}
         />
         <StatCard
+          title="Today's P&L"
+          value={formatCurrency(todayPnl)}
+          change={todayPnl / currentEquity}
+          icon={Calendar}
+          variant={todayPnl >= 0 ? 'success' : 'danger'}
+        />
+        <StatCard
           title="Unrealized P&L"
           value={formatCurrency(totalUnrealizedPnl)}
           change={totalUnrealizedPnl / currentEquity}
           icon={Activity}
+          variant={totalUnrealizedPnl >= 0 ? 'success' : 'danger'}
         />
         <StatCard
-          title="Win Rate"
-          value={`${((performanceData?.winRate || 0) * 100).toFixed(1)}%`}
-          icon={TrendingUp}
+          title="Current Drawdown"
+          value={formatPercent(-currentDrawdown)}
+          icon={DrawdownIcon}
+          variant={currentDrawdown > 0.1 ? 'danger' : currentDrawdown > 0.05 ? 'warning' : 'default'}
+        />
+      </div>
+
+      {/* Best/Worst Trades Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StatCard
+          title="Best Trade"
+          value={bestTrade ? formatCurrency(bestTrade.pnl || 0) : '$0.00'}
+          icon={Trophy}
+          variant="success"
         />
         <StatCard
-          title="Total Trades"
-          value={String(performanceData?.totalTrades || 0)}
-          icon={TrendingDown}
+          title="Worst Trade"
+          value={worstTrade ? formatCurrency(worstTrade.pnl || 0) : '$0.00'}
+          icon={AlertTriangle}
+          variant="danger"
         />
       </div>
 
@@ -163,7 +219,22 @@ export function Dashboard() {
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '6px',
                 }}
-                formatter={(value: number) => [formatCurrency(value), 'Equity']}
+                formatter={(value: number, name: string, props: any) => {
+                  const equity = value as number;
+                  const pnlPercent = startEquity > 0 ? ((equity - startEquity) / startEquity) : 0;
+                  return [
+                    <div key="tooltip">
+                      <div className="font-semibold">{formatCurrency(equity)}</div>
+                      <div className={cn(
+                        'text-sm',
+                        pnlPercent >= 0 ? 'text-green-500' : 'text-red-500'
+                      )}>
+                        {pnlPercent >= 0 ? '+' : ''}{formatPercent(pnlPercent)}
+                      </div>
+                    </div>,
+                    'Equity'
+                  ];
+                }}
               />
               <Area
                 type="monotone"

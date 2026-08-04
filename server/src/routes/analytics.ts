@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { db, trades, positions } from '../db/index.js';
-import { sql } from 'drizzle-orm';
+import { db, trades, positions, accountSnapshots } from '../db/index.js';
+import { desc } from 'drizzle-orm';
 
 export default async function routes(app: FastifyInstance) {
   // GET /api/analytics/performance?period=30d
@@ -24,6 +24,42 @@ export default async function routes(app: FastifyInstance) {
     const avgLoss = losingTrades.length > 0 ? grossLoss / losingTrades.length : 0;
     const expectancy = (winRate * avgWin) - ((1 - winRate) * avgLoss);
     
+    // Get equity history for advanced calculations
+    const snapshots = await db.select().from(accountSnapshots).orderBy(desc(accountSnapshots.timestamp));
+    const equityHistory = snapshots.reverse().map(s => s.totalEquity);
+    
+    // Calculate max drawdown
+    let maxDrawdown = 0;
+    let peak = equityHistory[0] || 0;
+    for (const equity of equityHistory) {
+      if (equity > peak) {
+        peak = equity;
+      }
+      const drawdown = peak > 0 ? (peak - equity) / peak : 0;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    }
+    
+    // Calculate total return
+    const startEquity = equityHistory[0] || 1;
+    const currentEquity = equityHistory[equityHistory.length - 1] || startEquity;
+    const totalReturn = (currentEquity - startEquity) / startEquity;
+    
+    // Calculate Sharpe ratio (simplified - assumes risk-free rate of 0)
+    let sharpeRatio = 0;
+    if (equityHistory.length > 1) {
+      const returns: number[] = [];
+      for (let i = 1; i < equityHistory.length; i++) {
+        const ret = (equityHistory[i] - equityHistory[i - 1]) / equityHistory[i - 1];
+        returns.push(ret);
+      }
+      const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+      const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+      const stdDev = Math.sqrt(variance);
+      sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(365) : 0; // Annualized
+    }
+    
     return {
       period,
       totalTrades: allTrades.length,
@@ -33,10 +69,9 @@ export default async function routes(app: FastifyInstance) {
       profitFactor: parseFloat(profitFactor.toFixed(4)),
       expectancy: parseFloat(expectancy.toFixed(4)),
       totalPnl: parseFloat(totalPnl.toFixed(4)),
-      // Placeholder for more complex metrics
-      sharpeRatio: 0,
-      maxDrawdown: 0,
-      totalReturn: 0,
+      sharpeRatio: parseFloat(sharpeRatio.toFixed(2)),
+      maxDrawdown: parseFloat(maxDrawdown.toFixed(4)),
+      totalReturn: parseFloat(totalReturn.toFixed(4)),
     };
   });
 
