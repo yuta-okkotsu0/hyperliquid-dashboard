@@ -79,7 +79,7 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Footer */}
             <div className="p-4 border-t border-border text-xs text-muted-foreground">
-              <p>Trading Dashboard v1.0</p>
+              <p>Trading Dashboard v1.1</p>
               <p className="mt-1">Read-only monitoring</p>
             </div>
           </div>
