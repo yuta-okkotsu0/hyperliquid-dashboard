@@ -1,0 +1,230 @@
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../lib/api';
+import { formatCurrency, formatPercent, formatNumber } from '../lib/utils';
+import { TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState } from 'react';
+import { cn } from '../lib/utils';
+
+const periods = [
+  { label: '1D', value: '1d' },
+  { label: '7D', value: '7d' },
+  { label: '30D', value: '30d' },
+  { label: 'All', value: 'all' },
+];
+
+function StatCard({ 
+  title, 
+  value, 
+  change, 
+  icon: Icon 
+}: { 
+  title: string; 
+  value: string; 
+  change?: number; 
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+          {change !== undefined && (
+            <p className={cn(
+              'text-sm mt-1 flex items-center gap-1',
+              change >= 0 ? 'text-green-500' : 'text-red-500'
+            )}>
+              {change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+              {formatPercent(change)}
+            </p>
+          )}
+        </div>
+        <div className="p-3 bg-secondary rounded-lg">
+          <Icon size={24} className="text-muted-foreground" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Dashboard() {
+  const [period, setPeriod] = useState('7d');
+  
+  const { data: equityData } = useQuery({
+    queryKey: ['account', 'equity', period],
+    queryFn: () => api.account.equity(period),
+  });
+  
+  const { data: balanceData } = useQuery({
+    queryKey: ['account', 'balance'],
+    queryFn: () => api.account.balance(),
+  });
+  
+  const { data: positionsData } = useQuery({
+    queryKey: ['positions', 'open'],
+    queryFn: () => api.positions.list('open'),
+  });
+  
+  const { data: performanceData } = useQuery({
+    queryKey: ['analytics', 'performance'],
+    queryFn: () => api.analytics.performance(),
+  });
+
+  const chartData = equityData?.data.map(d => ({
+    timestamp: new Date(d.timestamp).toLocaleDateString(),
+    equity: d.totalEquity,
+  })) || [];
+
+  const openPositions = positionsData?.data || [];
+  const totalUnrealizedPnl = openPositions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
+  
+  const currentEquity = balanceData?.totalEquity || 0;
+  const startEquity = chartData[0]?.equity || currentEquity;
+  const equityChange = startEquity > 0 ? (currentEquity - startEquity) / startEquity : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div className="flex gap-1 bg-secondary rounded-lg p-1">
+          {periods.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPeriod(p.value)}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                period === p.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Total Equity"
+          value={formatCurrency(currentEquity)}
+          change={equityChange}
+          icon={DollarSign}
+        />
+        <StatCard
+          title="Unrealized P&L"
+          value={formatCurrency(totalUnrealizedPnl)}
+          change={totalUnrealizedPnl / currentEquity}
+          icon={Activity}
+        />
+        <StatCard
+          title="Win Rate"
+          value={`${((performanceData?.winRate || 0) * 100).toFixed(1)}%`}
+          icon={TrendingUp}
+        />
+        <StatCard
+          title="Total Trades"
+          value={String(performanceData?.totalTrades || 0)}
+          icon={TrendingDown}
+        />
+      </div>
+
+      {/* Equity Chart */}
+      <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
+        <h2 className="text-lg font-semibold mb-4">Equity Curve</h2>
+        <div className="h-64 lg:h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis 
+                dataKey="timestamp" 
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={30}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '6px',
+                }}
+                formatter={(value: number) => [formatCurrency(value), 'Equity']}
+              />
+              <Area
+                type="monotone"
+                dataKey="equity"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                fill="url(#equityGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Open Positions Preview */}
+      <div className="bg-card rounded-lg border border-border p-4 lg:p-6">
+        <h2 className="text-lg font-semibold mb-4">Open Positions ({openPositions.length})</h2>
+        {openPositions.length === 0 ? (
+          <p className="text-muted-foreground">No open positions</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 font-medium text-muted-foreground">Asset</th>
+                  <th className="text-left py-2 font-medium text-muted-foreground">Side</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Size</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Entry</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Mark</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">P&L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {openPositions.slice(0, 5).map((position) => (
+                  <tr key={position.id} className="border-b border-border/50 last:border-0">
+                    <td className="py-3 font-medium">{position.coin}</td>
+                    <td className="py-3">
+                      <span className={cn(
+                        'px-2 py-1 rounded text-xs font-medium',
+                        position.side === 'LONG' 
+                          ? 'bg-green-500/10 text-green-500' 
+                          : 'bg-red-500/10 text-red-500'
+                      )}>
+                        {position.side}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">{formatNumber(position.size)}</td>
+                    <td className="py-3 text-right">${formatNumber(position.entryPrice, 2)}</td>
+                    <td className="py-3 text-right">${formatNumber(position.markPrice, 2)}</td>
+                    <td className={cn(
+                      'py-3 text-right font-medium',
+                      position.unrealizedPnl >= 0 ? 'text-green-500' : 'text-red-500'
+                    )}>
+                      {formatCurrency(position.unrealizedPnl)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

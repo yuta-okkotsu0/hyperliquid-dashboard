@@ -1,0 +1,21 @@
+{
+  "name": "hyperliquid-dashboard",
+  "version": "1.0.0",
+  "description": "Personal trading dashboard for Hyperliquid bot monitoring",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:web\"",
+    "dev:server": "pnpm --filter server dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "db:generate": "pnpm --filter server db:generate",
+    "db:migrate": "pnpm --filter server db:migrate",
+    "db:studio": "pnpm --filter server db:studio",
+    "mock:generate": "pnpm --filter server mock:generate",
+    "mock:clear": "pnpm --filter server mock:clear"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
