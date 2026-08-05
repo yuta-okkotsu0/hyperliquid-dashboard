@@ -68,6 +68,20 @@ export function Settings() {
     }
   }, []);
 
+  // Save settings and apply theme whenever they change
+  useEffect(() => {
+    localStorage.setItem('dashboard-settings', JSON.stringify(settings));
+    
+    // Apply theme immediately
+    if (settings.theme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else if (settings.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+  }, [settings]);
+
   // Check API connection
   useEffect(() => {
     const checkConnection = async () => {
@@ -93,20 +107,11 @@ export function Settings() {
     setIsSaving(true);
     localStorage.setItem('dashboard-settings', JSON.stringify(settings));
     
-    // Apply theme
-    if (settings.theme === 'light') {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    } else if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    }
-    
     setTimeout(() => {
       setIsSaving(false);
-      setSavedMessage('Settings saved successfully');
-      setTimeout(() => setSavedMessage(''), 3000);
-    }, 500);
+      setSavedMessage('Settings saved');
+      setTimeout(() => setSavedMessage(''), 2000);
+    }, 300);
   };
 
   const periods: { value: DefaultPeriod; label: string }[] = [
