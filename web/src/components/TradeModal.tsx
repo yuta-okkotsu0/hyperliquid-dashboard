@@ -63,15 +63,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
     enabled: isOpen && !!positionId,
   });
 
-  // Fetch related trades for positions - always call this hook
-  const { data: tradesData } = useQuery({
-    queryKey: ['trades', 'for-position', positionId],
-    queryFn: () => api.trades.list({
-      coin: coin,
-      limit: 10
-    }),
-    enabled: isOpen && !isTrade && !!positionId,
-  });
+
 
   // NOW we can do conditional rendering
   if (!isOpen || !position || typeof position !== 'object') {
@@ -79,9 +71,6 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
   }
 
   const reasoning = reasoningData?.data || [];
-  const relatedTrades = tradesData?.data?.filter((t: any) =>
-    t.positionId === positionId || t.coin === coin
-  ) || [];
 
   const pnlPercent = entryPrice > 0
     ? ((markPrice - entryPrice) / entryPrice) * (side === 'LONG' ? 1 : -1) * 100
@@ -311,50 +300,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
             </div>
           )}
 
-          {/* Related Trades for Positions */}
-          {!isTrade && relatedTrades.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-3">Related Trades ({relatedTrades.length})</h3>
-              <div className="bg-secondary/30 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary/50">
-                    <tr>
-                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">Time</th>
-                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">Side</th>
-                      <th className="text-right py-2 px-3 text-muted-foreground font-medium">Size</th>
-                      <th className="text-right py-2 px-3 text-muted-foreground font-medium">Price</th>
-                      <th className="text-right py-2 px-3 text-muted-foreground font-medium">P&L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {relatedTrades.slice(0, 5).map((trade: any) => (
-                      <tr key={trade.id} className="border-t border-border/50">
-                        <td className="py-2 px-3 text-muted-foreground">
-                          {trade.timestamp ? formatDate(trade.timestamp) : '-'}
-                        </td>
-                        <td className="py-2 px-3">
-                          <span className={cn(
-                            'text-xs',
-                            trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'
-                          )}>
-                            {trade.side}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-right">{formatNumber(trade.size || 0)}</td>
-                        <td className="py-2 px-3 text-right">${formatNumber(trade.price || 0, 2)}</td>
-                        <td className={cn(
-                          'py-2 px-3 text-right font-medium',
-                          (trade.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'
-                        )}>
-                          {trade.pnl !== undefined ? formatCurrency(trade.pnl) : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Footer */}
