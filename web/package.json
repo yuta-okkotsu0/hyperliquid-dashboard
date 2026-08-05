@@ -9,16 +9,16 @@
   },
   "dependencies": {
     "@hl/shared": "workspace:*",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@tanstack/react-query": "^5.51.15",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.414.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.25.1",
-    "@tanstack/react-query": "^5.51.15",
     "recharts": "^2.12.7",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.4.0",
-    "lucide-react": "^0.414.0",
-    "date-fns": "^3.6.0",
-    "@radix-ui/react-dialog": "^1.1.1"
+    "tailwind-merge": "^2.4.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

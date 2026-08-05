@@ -26,6 +26,30 @@
     --ring: 217 100% 50%;
     --radius: 0.5rem;
   }
+
+  /* Light Mode - White & Purple Theme */
+  .light {
+    --background: 0 0% 100%;            /* Pure white */
+    --foreground: 270 50% 20%;          /* Dark purple */
+    --card: 270 20% 98%;                /* Off-white with slight purple tint */
+    --card-foreground: 270 50% 20%;
+    --popover: 270 20% 98%;
+    --popover-foreground: 270 50% 20%;
+    --primary: 270 60% 50%;             /* Purple */
+    --primary-foreground: 0 0% 100%;    /* White text on purple */
+    --secondary: 270 20% 95%;           /* Light purple-gray */
+    --secondary-foreground: 270 50% 20%;
+    --muted: 270 20% 90%;
+    --muted-foreground: 270 20% 50%;
+    --accent: 270 60% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 270 30% 85%;
+    --input: 270 30% 90%;
+    --ring: 270 60% 50%;
+    --radius: 0.5rem;
+  }
 }
 
 @layer base {
@@ -83,4 +107,41 @@ nav a.bg-primary {
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(217 100% 40%);
+}
+
+/* Light mode overrides */
+.light body {
+  background-image:
+    linear-gradient(rgba(147, 51, 234, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147, 51, 234, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+.light .glow-primary {
+  box-shadow: 0 0 20px hsl(270 60% 50% / 0.3), 0 0 40px hsl(270 60% 50% / 0.1);
+}
+
+.light .glow-text {
+  text-shadow: 0 0 10px hsl(270 60% 50% / 0.5);
+}
+
+.light button.bg-primary:hover {
+  box-shadow: 0 0 15px hsl(270 60% 50% / 0.4), 0 0 30px hsl(270 60% 50% / 0.2);
+}
+
+.light .bg-card:hover {
+  box-shadow: 0 0 20px hsl(270 60% 50% / 0.1);
+}
+
+.light nav a[data-active="true"],
+.light nav a.bg-primary {
+  box-shadow: 0 0 15px hsl(270 60% 50% / 0.3);
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: hsl(270 60% 60%);
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: hsl(270 60% 50%);
 }

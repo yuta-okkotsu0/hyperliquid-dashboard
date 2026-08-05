@@ -3,9 +3,24 @@ import { api } from '../lib/api';
 import { formatCurrency, formatPercent, formatNumber } from '../lib/utils';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar, Trophy, AlertTriangle, TrendingDown as DrawdownIcon } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { PnLCalendar } from '../components/PnLCalendar';
+
+type DefaultPeriod = '1d' | '7d' | '30d' | 'all';
+
+interface SettingsState {
+  theme: 'dark' | 'light' | 'system';
+  defaultPeriod: DefaultPeriod;
+  autoRefresh: boolean;
+  refreshInterval: number;
+  notifications: {
+    newTrades: boolean;
+    positionClosed: boolean;
+    drawdownAlert: boolean;
+    dailySummary: boolean;
+  };
+}
 
 const iconGlowClass = "drop-shadow-[0_0_8px_hsl(217,100%,50%)]";
 
@@ -61,7 +76,22 @@ function StatCard({
 }
 
 export function Dashboard() {
-  const [period, setPeriod] = useState('7d');
+  const [period, setPeriod] = useState<DefaultPeriod>('7d');
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('dashboard-settings');
+    if (saved) {
+      try {
+        const settings: SettingsState = JSON.parse(saved);
+        if (settings.defaultPeriod) {
+          setPeriod(settings.defaultPeriod);
+        }
+      } catch (e) {
+        console.error('Failed to parse settings:', e);
+      }
+    }
+  }, []);
   
   const { data: equityData } = useQuery({
     queryKey: ['account', 'equity', period],
@@ -165,7 +195,7 @@ export function Dashboard() {
           {periods.map((p) => (
             <button
               key={p.value}
-              onClick={() => setPeriod(p.value)}
+              onClick={() => setPeriod(p.value as DefaultPeriod)}
               className={cn(
                 'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                 period === p.value

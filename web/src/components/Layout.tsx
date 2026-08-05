@@ -103,7 +103,7 @@ export function Layout({ children }: LayoutProps) {
             {/* Footer */}
             <div className="p-4 border-t border-border text-xs text-muted-foreground">
               <div className="flex items-center justify-between mb-2">
-                <span>Trading Dashboard v1.3</span>
+                <span>Trading Dashboard v1.4</span>
                 <div className="flex items-center gap-1.5">
                   <Radio 
                     size={12} 

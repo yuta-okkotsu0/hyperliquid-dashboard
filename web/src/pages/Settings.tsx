@@ -46,12 +46,22 @@ export function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
 
-  // Load settings from localStorage on mount
+  // Load settings from localStorage on mount and apply theme
   useEffect(() => {
     const saved = localStorage.getItem('dashboard-settings');
     if (saved) {
       try {
-        setSettings(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setSettings(parsed);
+
+        // Apply theme immediately on load
+        if (parsed.theme === 'light') {
+          document.documentElement.classList.add('light');
+          document.documentElement.classList.remove('dark');
+        } else if (parsed.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+        }
       } catch (e) {
         console.error('Failed to parse settings:', e);
       }
