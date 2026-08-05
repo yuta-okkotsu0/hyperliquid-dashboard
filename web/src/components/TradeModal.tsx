@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '../components/ui/dialog';
 import { formatCurrency, formatNumber, formatDate, cn } from '../lib/utils';
 import { Clock, DollarSign, Target, BarChart3, Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -52,8 +52,8 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
   const initialMargin = position.leverage ? positionSize / position.leverage : positionSize;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span className="text-2xl">{position.coin}</span>
@@ -256,6 +256,18 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
             )}
           </div>
         )}
+
+        {/* Manual Close Button */}
+        <div className="mt-6 flex justify-end">
+          <DialogClose asChild>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Close
+            </button>
+          </DialogClose>
+        </div>
 
         {/* Related Trades for Positions */}
         {!isTrade && relatedTrades.length > 0 && (
