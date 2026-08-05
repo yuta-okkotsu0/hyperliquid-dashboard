@@ -14,60 +14,87 @@ interface TradeModalProps {
 export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
   const [showReasoning, setShowReasoning] = useState(true);
 
-  if (!position) return null;
+  // Don't render anything if position is null/undefined
+  if (!position || typeof position !== 'object') {
+    return null;
+  }
 
-  // Check if this is a trade (has pnl property) or a position
-  const isTrade = position.pnl !== undefined && !position.status;
+  // Safe property access with defaults
+  const positionId = position.id || '';
+  const coin = position.coin || 'Unknown';
+  const side = position.side || 'LONG';
+  const size = position.size || 0;
+  const leverage = position.leverage || 1;
+  const entryPrice = position.entryPrice || position.price || 0;
+  const markPrice = position.markPrice || entryPrice;
+  const unrealizedPnl = position.unrealizedPnl || 0;
+  const pnl = position.pnl;
+  const status = position.status;
+  const liquidationPrice = position.liquidationPrice;
+  const fee = position.fee;
+  const strategyId = position.strategyId;
+  const openedAt = position.openedAt;
+  const timestamp = position.timestamp;
+  const closedAt = position.closedAt;
+
+  // Check if this is a trade (has pnl property but no status) or a position
+  const isTrade = pnl !== undefined && !status;
 
   // Fetch reasoning for this position/trade
   const { data: reasoningData } = useQuery({
-    queryKey: ['reasoning', 'for-trade', position.id],
+    queryKey: ['reasoning', 'for-trade', positionId],
     queryFn: () => api.reasoning.list({
-      positionId: isTrade ? position.positionId : position.id,
+      positionId: isTrade ? position.positionId : positionId,
       limit: 5
     }),
-    enabled: isOpen && !!position.id,
+    enabled: isOpen && !!positionId,
   });
 
   // Fetch related trades for positions
   const { data: tradesData } = useQuery({
-    queryKey: ['trades', 'for-position', position.id],
+    queryKey: ['trades', 'for-position', positionId],
     queryFn: () => api.trades.list({
-      coin: position.coin,
+      coin: coin,
       limit: 10
     }),
     enabled: isOpen && !isTrade,
   });
 
   const reasoning = reasoningData?.data || [];
-  const relatedTrades = tradesData?.data.filter((t: any) =>
-    t.positionId === position.id || t.coin === position.coin
+  const relatedTrades = tradesData?.data?.filter((t: any) =>
+    t.positionId === positionId || t.coin === coin
   ) || [];
 
-  const pnlPercent = position.entryPrice > 0
-    ? ((position.markPrice - position.entryPrice) / position.entryPrice) * (position.side === 'LONG' ? 1 : -1) * 100
+  const pnlPercent = entryPrice > 0
+    ? ((markPrice - entryPrice) / entryPrice) * (side === 'LONG' ? 1 : -1) * 100
     : 0;
 
-  const positionSize = position.size * (position.markPrice || position.price);
-  const initialMargin = position.leverage ? positionSize / position.leverage : positionSize;
+  const positionSize = size * (markPrice || entryPrice || 1);
+  const initialMargin = leverage ? positionSize / leverage : positionSize;
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <span className="text-2xl">{position.coin}</span>
+            <span className="text-2xl">{coin}</span>
             <span className={cn(
               'px-2 py-1 rounded text-sm font-medium',
-              (position.side === 'LONG' || position.side === 'BUY')
+              (side === 'LONG' || side === 'BUY')
                 ? 'bg-green-500/10 text-green-500'
                 : 'bg-red-500/10 text-red-500'
             )}>
-              {position.side}
+              {side}
             </span>
-            {position.leverage && (
+            {leverage > 1 && (
               <span className="text-sm text-muted-foreground">
-                {position.leverage}x
+                {leverage}x
               </span>
             )}
           </DialogTitle>
@@ -82,9 +109,9 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
             </div>
             <p className={cn(
               'text-lg font-bold mt-1',
-              (position.unrealizedPnl || position.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'
+              (unrealizedPnl || pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'
             )}>
-              {formatCurrency(position.unrealizedPnl || position.pnl || 0)}
+              {formatCurrency(unrealizedPnl || pnl || 0)}
             </p>
             {!isTrade && (
               <p className={cn(
@@ -101,7 +128,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
               <BarChart3 size={14} />
               <span>Size</span>
             </div>
-            <p className="text-lg font-bold mt-1">{formatNumber(position.size)}</p>
+            <p className="text-lg font-bold mt-1">{formatNumber(size)}</p>
             <p className="text-xs text-muted-foreground">
               {formatCurrency(positionSize)}
             </p>
@@ -112,10 +139,10 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
               <Target size={14} />
               <span>{isTrade ? 'Price' : 'Entry Price'}</span>
             </div>
-            <p className="text-lg font-bold mt-1">${formatNumber(position.entryPrice || position.price, 2)}</p>
-            {!isTrade && (
+            <p className="text-lg font-bold mt-1">${formatNumber(entryPrice, 2)}</p>
+            {!isTrade && markPrice !== entryPrice && (
               <p className="text-xs text-muted-foreground">
-                Mark: ${formatNumber(position.markPrice, 2)}
+                Mark: ${formatNumber(markPrice, 2)}
               </p>
             )}
           </div>
@@ -126,23 +153,23 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
               <span>Time</span>
             </div>
             <p className="text-lg font-bold mt-1">
-              {formatDate(position.openedAt || position.timestamp)}
+              {openedAt ? formatDate(openedAt) : timestamp ? formatDate(timestamp) : '-'}
             </p>
-            {!isTrade && position.closedAt && (
+            {!isTrade && closedAt && (
               <p className="text-xs text-muted-foreground">
-                Closed: {formatDate(position.closedAt)}
+                Closed: {formatDate(closedAt)}
               </p>
             )}
           </div>
         </div>
 
         {/* Position Details */}
-        <div className="bg-card border border-border rounded-lg p-4 mt-4">
+        <div className="bg-secondary/30 rounded-lg p-4 mt-4">
           <h3 className="font-semibold mb-3">Details</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Strategy:</span>
-              <span className="ml-2 font-medium">{position.strategyId || 'Default'}</span>
+              <span className="ml-2 font-medium">{strategyId || 'Default'}</span>
             </div>
             {!isTrade && (
               <>
@@ -150,32 +177,32 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                   <span className="text-muted-foreground">Initial Margin:</span>
                   <span className="ml-2 font-medium">{formatCurrency(initialMargin)}</span>
                 </div>
-                {position.liquidationPrice && (
+                {liquidationPrice && (
                   <div>
                     <span className="text-muted-foreground">Liquidation:</span>
                     <span className="ml-2 font-medium text-red-500">
-                      ${formatNumber(position.liquidationPrice, 2)}
+                      ${formatNumber(liquidationPrice, 2)}
                     </span>
                   </div>
                 )}
               </>
             )}
-            {position.fee !== undefined && (
+            {fee !== undefined && (
               <div>
                 <span className="text-muted-foreground">Fee:</span>
-                <span className="ml-2 font-medium">${formatNumber(position.fee, 4)}</span>
+                <span className="ml-2 font-medium">${formatNumber(fee, 4)}</span>
               </div>
             )}
-            {position.status && (
+            {status && (
               <div>
                 <span className="text-muted-foreground">Status:</span>
                 <span className={cn(
                   'ml-2 px-2 py-0.5 rounded text-xs font-medium',
-                  position.status === 'OPEN' && 'bg-blue-500/10 text-blue-500',
-                  position.status === 'CLOSED' && 'bg-gray-500/10 text-gray-500',
-                  position.status === 'LIQUIDATED' && 'bg-red-500/10 text-red-500'
+                  status === 'OPEN' && 'bg-blue-500/10 text-blue-500',
+                  status === 'CLOSED' && 'bg-gray-500/10 text-gray-500',
+                  status === 'LIQUIDATED' && 'bg-red-500/10 text-red-500'
                 )}>
-                  {position.status}
+                  {status}
                 </span>
               </div>
             )}
@@ -187,7 +214,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
           <div className="mt-4">
             <button
               onClick={() => setShowReasoning(!showReasoning)}
-              className="flex items-center gap-2 w-full text-left"
+              className="flex items-center gap-2 w-full text-left hover:bg-secondary/30 p-2 rounded-lg transition-colors"
             >
               <Brain className="text-primary" size={18} />
               <h3 className="font-semibold">AI Reasoning</h3>
@@ -198,7 +225,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
             {showReasoning && (
               <div className="mt-3 space-y-3">
                 {reasoning.map((r: any) => (
-                  <div key={r.id} className="bg-card border border-border rounded-lg p-4">
+                  <div key={r.id} className="bg-secondary/30 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className={cn(
                         'px-2 py-0.5 rounded text-xs font-medium',
@@ -207,7 +234,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                         r.action === 'CLOSE' && 'bg-blue-500/10 text-blue-500',
                         r.action === 'HOLD' && 'bg-gray-500/10 text-gray-500'
                       )}>
-                        {r.action.replace('_', ' ')}
+                        {r.action?.replace('_', ' ') || 'UNKNOWN'}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">Confidence</span>
@@ -215,17 +242,17 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                           <div
                             className={cn(
                               'h-full rounded-full',
-                              r.confidence >= 0.8 ? 'bg-green-500' :
-                                r.confidence >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                              (r.confidence || 0) >= 0.8 ? 'bg-green-500' :
+                                (r.confidence || 0) >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
                             )}
-                            style={{ width: `${r.confidence * 100}%` }}
+                            style={{ width: `${(r.confidence || 0) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs font-medium">{Math.round(r.confidence * 100)}%</span>
+                        <span className="text-xs font-medium">{Math.round((r.confidence || 0) * 100)}%</span>
                       </div>
                     </div>
 
-                    <p className="text-sm mb-3">{r.reasoning}</p>
+                    <p className="text-sm mb-3">{r.reasoning || 'No reasoning provided'}</p>
 
                     {r.indicators && Object.keys(r.indicators).length > 0 && (
                       <div className="bg-secondary/50 rounded-lg p-3">
@@ -239,7 +266,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                                   ? value > 1000
                                     ? `${(value / 1000).toFixed(1)}k`
                                     : value.toFixed(2)
-                                  : value}
+                                  : String(value)}
                               </span>
                             </div>
                           ))}
@@ -248,7 +275,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                     )}
 
                     <p className="text-[10px] text-muted-foreground mt-2">
-                      {formatDate(r.timestamp)}
+                      {r.timestamp ? formatDate(r.timestamp) : '-'}
                     </p>
                   </div>
                 ))}
@@ -257,23 +284,11 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
           </div>
         )}
 
-        {/* Manual Close Button */}
-        <div className="mt-6 flex justify-end">
-          <DialogClose asChild>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-            >
-              Close
-            </button>
-          </DialogClose>
-        </div>
-
         {/* Related Trades for Positions */}
         {!isTrade && relatedTrades.length > 0 && (
           <div className="mt-4">
             <h3 className="font-semibold mb-3">Related Trades ({relatedTrades.length})</h3>
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="bg-secondary/30 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-secondary/50">
                   <tr>
@@ -288,7 +303,7 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                   {relatedTrades.slice(0, 5).map((trade: any) => (
                     <tr key={trade.id} className="border-t border-border/50">
                       <td className="py-2 px-3 text-muted-foreground">
-                        {formatDate(trade.timestamp)}
+                        {trade.timestamp ? formatDate(trade.timestamp) : '-'}
                       </td>
                       <td className="py-2 px-3">
                         <span className={cn(
@@ -298,8 +313,8 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                           {trade.side}
                         </span>
                       </td>
-                      <td className="py-2 px-3 text-right">{formatNumber(trade.size)}</td>
-                      <td className="py-2 px-3 text-right">${formatNumber(trade.price, 2)}</td>
+                      <td className="py-2 px-3 text-right">{formatNumber(trade.size || 0)}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(trade.price || 0, 2)}</td>
                       <td className={cn(
                         'py-2 px-3 text-right font-medium',
                         (trade.pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'
@@ -313,6 +328,18 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
             </div>
           </div>
         )}
+
+        {/* Manual Close Button */}
+        <div className="mt-6 flex justify-end">
+          <DialogClose asChild>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Close
+            </button>
+          </DialogClose>
+        </div>
       </DialogContent>
     </Dialog>
   );
