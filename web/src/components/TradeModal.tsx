@@ -226,21 +226,21 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
           </div>
 
           {/* AI Reasoning Section */}
-          {reasoning.length > 0 && (
-            <div>
-              <button
-                onClick={() => setShowReasoning(!showReasoning)}
-                className="flex items-center gap-2 w-full text-left hover:bg-secondary/30 p-2 rounded-lg transition-colors"
-              >
-                <Brain className="text-primary" size={18} />
-                <h3 className="font-semibold">AI Reasoning</h3>
-                <span className="text-xs text-muted-foreground">({reasoning.length})</span>
-                {showReasoning ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
+          <div>
+            <button
+              onClick={() => setShowReasoning(!showReasoning)}
+              className="flex items-center gap-2 w-full text-left hover:bg-secondary/30 p-2 rounded-lg transition-colors"
+            >
+              <Brain className="text-primary" size={18} />
+              <h3 className="font-semibold">AI Reasoning</h3>
+              <span className="text-xs text-muted-foreground">({reasoning.length})</span>
+              {showReasoning ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
 
-              {showReasoning && (
-                <div className="mt-3 space-y-3">
-                  {reasoning.map((r: any) => (
+            {showReasoning && (
+              <div className="mt-3 space-y-3">
+                {reasoning.length > 0 ? (
+                  reasoning.map((r: any) => (
                     <div key={r.id} className="bg-secondary/30 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className={cn(
@@ -294,11 +294,15 @@ export function TradeModal({ position, isOpen, onClose }: TradeModalProps) {
                         {r.timestamp ? formatDate(r.timestamp) : '-'}
                       </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  ))
+                ) : (
+                  <div className="bg-secondary/30 rounded-lg p-4 text-center text-muted-foreground text-sm">
+                    No reasoning available for this position
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
 
         </div>
