@@ -1,8 +1,7 @@
-import { db, accountSnapshots, positions, trades, aiReasoning, logs, botStatus } from '../db/index.js';
+import { db, accountSnapshots, positions, trades, aiReasoning, logs, botStatus, strategies, orders, exchangeHealth, activities } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const COINS = ['ETH', 'BTC', 'SOL', 'ARB', 'LINK'];
-const STRATEGIES = ['trend_following', 'breakout', 'mean_reversion'];
 
 function randomBetween(min: number, max: number): number {
   return Math.random() * (max - min) + min;
@@ -29,6 +28,28 @@ async function generateMockData() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   
+  // Generate strategies
+  console.log('Creating strategies...');
+  const strategyData = [
+    { id: 'trend_following', name: 'Trend Follower', description: 'Follows strong trends with momentum confirmation' },
+    { id: 'breakout', name: 'Breakout Hunter', description: 'Trades breakouts from key levels with volume confirmation' },
+    { id: 'mean_reversion', name: 'Mean Reversion', description: 'Counter-trend trades at overbought/oversold levels' },
+  ];
+  
+  for (const strat of strategyData) {
+    await db.insert(strategies).values({
+      id: strat.id,
+      name: strat.name,
+      description: strat.description,
+      active: true,
+      totalTrades: Math.floor(randomBetween(10, 50)),
+      winningTrades: Math.floor(randomBetween(5, 30)),
+      totalPnl: randomBetween(-2000, 5000),
+      sharpeRatio: randomBetween(0.5, 2.5),
+      maxDrawdown: randomBetween(0.05, 0.25),
+    });
+  }
+  
   // Generate account snapshots (hourly for 30 days)
   console.log('Creating account snapshots...');
   let currentEquity = 10000;
@@ -52,16 +73,19 @@ async function generateMockData() {
   await db.insert(accountSnapshots).values(snapshots);
   
   // Generate positions and trades
-  console.log('Creating positions and trades...');
+  console.log('Creating positions, trades, and orders...');
   const numPositions = 25;
+  const strategyIds = strategyData.map(s => s.id);
   
   for (let i = 0; i < numPositions; i++) {
     const coin = randomChoice(COINS);
     const side = Math.random() > 0.5 ? 'LONG' : 'SHORT';
     const isOpen = i < 5; // Keep last 5 open
     const entryPrice = randomBetween(100, 5000);
-    const leverage = randomBetween(2, 10);
+    const leverage = Math.floor(randomBetween(2, 10));
     const size = randomBetween(0.1, 5);
+    const strategyId = randomChoice(strategyIds);
+    const marginUsed = (size * entryPrice) / leverage;
     
     const openedAt = new Date(thirtyDaysAgo.getTime() + Math.random() * 25 * 24 * 60 * 60 * 1000);
     const closedAt = isOpen ? undefined : new Date(openedAt.getTime() + randomBetween(1, 72) * 60 * 60 * 1000);
@@ -71,6 +95,7 @@ async function generateMockData() {
     
     await db.insert(positions).values({
       id: positionId,
+      strategyId,
       coin,
       side,
       entryPrice,
@@ -81,15 +106,47 @@ async function generateMockData() {
       liquidationPrice: side === 'LONG' 
         ? entryPrice * (1 - 0.9 / leverage) 
         : entryPrice * (1 + 0.9 / leverage),
+      marginUsed,
       openedAt,
       closedAt,
       status: isOpen ? 'OPEN' : 'CLOSED',
+    });
+    
+    // Create pending order first
+    const orderId = uuidv4();
+    const orderType = randomChoice(['MARKET', 'LIMIT', 'STOP']);
+    await db.insert(orders).values({
+      id: orderId,
+      strategyId,
+      positionId,
+      coin,
+      side,
+      orderType: orderType as 'MARKET' | 'LIMIT' | 'STOP',
+      status: 'FILLED',
+      size,
+      price: orderType === 'LIMIT' ? entryPrice * 0.995 : entryPrice,
+      filledPrice: entryPrice,
+      createdAt: new Date(openedAt.getTime() - 60000),
+      updatedAt: openedAt,
+      closedAt: openedAt,
+    });
+    
+    // Create activity for order filled
+    await db.insert(activities).values({
+      id: uuidv4(),
+      strategyId,
+      type: 'ORDER_FILLED',
+      message: `${side} ${coin} order filled @ $${entryPrice.toFixed(2)}`,
+      coin,
+      data: JSON.stringify({ size, price: entryPrice, orderType }),
+      timestamp: openedAt,
     });
     
     // Create entry trade
     const entryTradeId = uuidv4();
     await db.insert(trades).values({
       id: entryTradeId,
+      strategyId,
       positionId,
       coin,
       side: side === 'LONG' ? 'BUY' : 'SELL',
@@ -127,6 +184,7 @@ async function generateMockData() {
       const exitTradeId = uuidv4();
       await db.insert(trades).values({
         id: exitTradeId,
+        strategyId,
         positionId,
         coin,
         side: side === 'LONG' ? 'SELL' : 'BUY',
@@ -134,6 +192,17 @@ async function generateMockData() {
         price: exitPrice,
         fee: size * exitPrice * 0.00035,
         pnl,
+        timestamp: closedAt,
+      });
+      
+      // Add activity for position closed
+      await db.insert(activities).values({
+        id: uuidv4(),
+        strategyId,
+        type: 'POSITION_CLOSED',
+        message: `${side} ${coin} position closed @ $${exitPrice.toFixed(2)} (P&L: $${pnl!.toFixed(2)})`,
+        coin,
+        data: JSON.stringify({ size, exitPrice, pnl, entryPrice }),
         timestamp: closedAt,
       });
       
@@ -156,6 +225,38 @@ async function generateMockData() {
         }),
       });
     }
+  }
+  
+  // Generate some pending orders
+  console.log('Creating pending orders...');
+  for (let i = 0; i < 3; i++) {
+    const coin = randomChoice(COINS);
+    const side = Math.random() > 0.5 ? 'LONG' : 'SHORT';
+    const strategyId = randomChoice(strategyIds);
+    const size = randomBetween(0.5, 2);
+    const price = randomBetween(100, 5000);
+    
+    await db.insert(orders).values({
+      id: uuidv4(),
+      strategyId,
+      coin,
+      side,
+      orderType: 'LIMIT',
+      status: 'PENDING',
+      size,
+      price,
+      createdAt: new Date(now.getTime() - randomBetween(60000, 300000)),
+    });
+    
+    await db.insert(activities).values({
+      id: uuidv4(),
+      strategyId,
+      type: 'ORDER_CREATED',
+      message: `Pending ${side} ${coin} order @ $${price.toFixed(2)}`,
+      coin,
+      data: JSON.stringify({ size, price, orderType: 'LIMIT' }),
+      timestamp: new Date(now.getTime() - randomBetween(60000, 300000)),
+    });
   }
   
   // Generate logs
@@ -195,10 +296,38 @@ async function generateMockData() {
     startedAt: thirtyDaysAgo,
   });
   
+  // Set exchange health
+  await db.insert(exchangeHealth).values({
+    id: 1,
+    status: 'ONLINE',
+    latencyMs: Math.floor(randomBetween(50, 200)),
+    rateLimitUsed: Math.floor(randomBetween(10, 80)),
+    rateLimitTotal: 100,
+    lastCheck: now,
+  });
+  
+  // Add some error/warning activities
+  await db.insert(activities).values({
+    id: uuidv4(),
+    type: 'ERROR',
+    message: 'Rate limit warning: 85/100 requests used',
+    timestamp: new Date(now.getTime() - 3600000),
+  });
+  
+  await db.insert(activities).values({
+    id: uuidv4(),
+    type: 'WARNING',
+    message: 'High volatility detected on BTC',
+    coin: 'BTC',
+    timestamp: new Date(now.getTime() - 7200000),
+  });
+  
   console.log('✅ Mock data generated successfully!');
+  console.log(`   - ${strategyData.length} strategies`);
   console.log(`   - ${snapshots.length} account snapshots`);
   console.log(`   - ${numPositions} positions`);
   console.log(`   - ${logEntries.length} log entries`);
+  console.log(`   - Pending orders and activities created`);
 }
 
 generateMockData().catch(console.error);

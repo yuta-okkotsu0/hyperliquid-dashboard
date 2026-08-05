@@ -25,6 +25,7 @@ export default async function routes(app: FastifyInstance) {
     return {
       data: paginated.map(t => ({
         id: t.id,
+        strategyId: t.strategyId,
         positionId: t.positionId,
         coin: t.coin,
         side: t.side,

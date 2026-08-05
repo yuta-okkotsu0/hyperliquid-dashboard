@@ -14,6 +14,7 @@ export default async function routes(app: FastifyInstance) {
     return {
       data: results.map(p => ({
         id: p.id,
+        strategyId: p.strategyId,
         coin: p.coin,
         side: p.side,
         entryPrice: p.entryPrice,
@@ -22,6 +23,7 @@ export default async function routes(app: FastifyInstance) {
         leverage: p.leverage,
         unrealizedPnl: p.unrealizedPnl,
         liquidationPrice: p.liquidationPrice,
+        marginUsed: p.marginUsed,
         openedAt: p.openedAt.toISOString(),
         closedAt: p.closedAt?.toISOString(),
         status: p.status,
@@ -43,6 +45,7 @@ export default async function routes(app: FastifyInstance) {
     
     return {
       id: position.id,
+      strategyId: position.strategyId,
       coin: position.coin,
       side: position.side,
       entryPrice: position.entryPrice,
@@ -51,6 +54,7 @@ export default async function routes(app: FastifyInstance) {
       leverage: position.leverage,
       unrealizedPnl: position.unrealizedPnl,
       liquidationPrice: position.liquidationPrice,
+      marginUsed: position.marginUsed,
       openedAt: position.openedAt.toISOString(),
       closedAt: position.closedAt?.toISOString(),
       status: position.status,

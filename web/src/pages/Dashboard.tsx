@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceD
 import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { PnLCalendar } from '../components/PnLCalendar';
+import { ExchangeHealth } from '../components/ExchangeHealth';
 
 type DefaultPeriod = '1d' | '7d' | '30d' | 'all';
 
@@ -209,8 +210,12 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Exchange Health & Stats Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-1">
+          <ExchangeHealth />
+        </div>
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Equity"
           value={formatCurrency(currentEquity)}
@@ -237,6 +242,7 @@ export function Dashboard() {
           icon={DrawdownIcon}
           variant={currentDrawdown > 0.1 ? 'danger' : currentDrawdown > 0.05 ? 'warning' : 'default'}
         />
+        </div>
       </div>
 
       {/* Best/Worst Trades Row */}

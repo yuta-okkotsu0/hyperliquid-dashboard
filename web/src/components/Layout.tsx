@@ -9,7 +9,9 @@ import {
   Menu,
   X,
   Settings,
-  Radio
+  Radio,
+  ListOrdered,
+  Target
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
@@ -18,7 +20,9 @@ import { useLiveUpdates } from '../hooks/useLiveUpdates';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Positions', href: '/positions', icon: TrendingUp },
+  { name: 'Orders', href: '/orders', icon: ListOrdered },
   { name: 'Trades', href: '/trades', icon: History },
+  { name: 'Strategies', href: '/strategies', icon: Target },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Reasoning', href: '/reasoning', icon: Brain },
   { name: 'Logs', href: '/logs', icon: ScrollText },

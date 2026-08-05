@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { db, accountSnapshots, trades, positions } from '../db/index.js';
+import { db, accountSnapshots, trades, positions, activities, exchangeHealth } from '../db/index.js';
 import { desc, sql } from 'drizzle-orm';
 
 // Store connected clients
@@ -34,6 +34,12 @@ export async function broadcastUpdate() {
     const winningTrades = allTrades.filter(t => (t.pnl || 0) > 0);
     const totalPnl = allTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
 
+    // Get recent activities
+    const recentActivities = await db.select().from(activities).orderBy(desc(activities.timestamp)).limit(10);
+
+    // Get exchange health
+    const health = await db.select().from(exchangeHealth).where(sql`${exchangeHealth.id} = 1`).limit(1);
+
     broadcast({
       type: 'update',
       timestamp: new Date().toISOString(),
@@ -56,6 +62,19 @@ export async function broadcastUpdate() {
         performance: {
           totalPnl,
         },
+        activities: recentActivities.map(a => ({
+          id: a.id,
+          type: a.type,
+          message: a.message,
+          coin: a.coin,
+          timestamp: a.timestamp.toISOString(),
+        })),
+        exchangeHealth: health[0] ? {
+          status: health[0].status,
+          latencyMs: health[0].latencyMs,
+          rateLimitUsed: health[0].rateLimitUsed,
+          rateLimitTotal: health[0].rateLimitTotal,
+        } : null,
       },
     });
   } catch (err) {

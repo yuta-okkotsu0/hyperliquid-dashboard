@@ -7,14 +7,20 @@ import { Analytics } from './pages/Analytics';
 import { Reasoning } from './pages/Reasoning';
 import { Logs } from './pages/Logs';
 import { Settings } from './pages/Settings';
+import { Orders } from './pages/Orders';
+import { Strategies } from './pages/Strategies';
+import { ActivityFeed } from './components/ActivityFeed';
 
 function App() {
   return (
     <Layout>
+      <ActivityFeed />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/positions" element={<Positions />} />
+        <Route path="/orders" element={<Orders />} />
         <Route path="/trades" element={<Trades />} />
+        <Route path="/strategies" element={<Strategies />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/reasoning" element={<Reasoning />} />
         <Route path="/logs" element={<Logs />} />

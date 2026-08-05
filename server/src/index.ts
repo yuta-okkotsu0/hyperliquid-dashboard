@@ -12,6 +12,10 @@ import reasoningRoutes from './routes/reasoning.js';
 import logsRoutes from './routes/logs.js';
 import statusRoutes from './routes/status.js';
 import streamRoutes, { broadcastUpdate } from './routes/stream.js';
+import ordersRoutes from './routes/orders.js';
+import strategiesRoutes from './routes/strategies.js';
+import exchangeRoutes from './routes/exchange.js';
+import activitiesRoutes from './routes/activities.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
@@ -45,6 +49,10 @@ await app.register(reasoningRoutes, { prefix: '/api/reasoning' });
 await app.register(logsRoutes, { prefix: '/api/logs' });
 await app.register(statusRoutes, { prefix: '/api/status' });
 await app.register(streamRoutes, { prefix: '/api/stream' });
+await app.register(ordersRoutes, { prefix: '/api/orders' });
+await app.register(strategiesRoutes, { prefix: '/api/strategies' });
+await app.register(exchangeRoutes, { prefix: '/api/exchange' });
+await app.register(activitiesRoutes, { prefix: '/api/activities' });
 
 // Health check
 app.get('/health', async () => {
