@@ -1,10 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  TrendingUp, 
   History, 
   BarChart3, 
-  Brain, 
   ScrollText,
   Menu,
   X,
@@ -19,12 +17,10 @@ import { useLiveUpdates } from '../hooks/useLiveUpdates';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Positions', href: '/positions', icon: TrendingUp },
   { name: 'Orders', href: '/orders', icon: ListOrdered },
   { name: 'Trades', href: '/trades', icon: History },
   { name: 'Strategies', href: '/strategies', icon: Target },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Reasoning', href: '/reasoning', icon: Brain },
   { name: 'Logs', href: '/logs', icon: ScrollText },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -107,7 +103,7 @@ export function Layout({ children }: LayoutProps) {
             {/* Footer */}
             <div className="p-4 border-t border-border text-xs text-muted-foreground">
               <div className="flex items-center justify-between mb-2">
-                <span>Trading Dashboard v1.4</span>
+                <span>Trading Dashboard v1.6</span>
                 <div className="flex items-center gap-1.5">
                   <Radio 
                     size={12} 
