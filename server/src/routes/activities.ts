@@ -46,11 +46,13 @@ export default async function routes(app: FastifyInstance) {
     
     const sinceDate = since ? new Date(since) : new Date(Date.now() - 60000); // Default 1 minute ago
     
-    const recent = await db.select()
+    // Filter in memory since Drizzle SQLite has limitations
+    const allRecent = await db.select()
       .from(activities)
-      .where(activities.timestamp > sinceDate)
       .orderBy(desc(activities.timestamp))
-      .limit(10);
+      .limit(50);
+    
+    const recent = allRecent.filter(a => a.timestamp > sinceDate).slice(0, 10);
     
     return {
       data: recent.map(a => ({

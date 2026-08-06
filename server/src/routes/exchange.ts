@@ -22,9 +22,9 @@ export default async function routes(app: FastifyInstance) {
       status: health.status,
       latencyMs: health.latencyMs,
       rateLimit: {
-        used: health.rateLimitUsed,
-        total: health.rateLimitTotal,
-        remaining: health.rateLimitTotal - health.rateLimitUsed,
+        used: health.rateLimitUsed ?? 0,
+        total: health.rateLimitTotal ?? 100,
+        remaining: (health.rateLimitTotal ?? 100) - (health.rateLimitUsed ?? 0),
       },
       lastCheck: health.lastCheck.toISOString(),
       errorMessage: health.errorMessage,

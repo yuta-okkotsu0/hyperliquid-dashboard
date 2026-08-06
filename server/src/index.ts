@@ -4,6 +4,7 @@ import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { db } from './db/index.js';
+import { generateMockData } from './utils/mock-data.js';
 import accountRoutes from './routes/account.js';
 import positionsRoutes from './routes/positions.js';
 import tradesRoutes from './routes/trades.js';
@@ -16,6 +17,7 @@ import ordersRoutes from './routes/orders.js';
 import strategiesRoutes from './routes/strategies.js';
 import exchangeRoutes from './routes/exchange.js';
 import activitiesRoutes from './routes/activities.js';
+import ingestRoutes from './routes/ingest.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
@@ -53,6 +55,7 @@ await app.register(ordersRoutes, { prefix: '/api/orders' });
 await app.register(strategiesRoutes, { prefix: '/api/strategies' });
 await app.register(exchangeRoutes, { prefix: '/api/exchange' });
 await app.register(activitiesRoutes, { prefix: '/api/activities' });
+await app.register(ingestRoutes, { prefix: '/api/ingest' });
 
 // Health check
 app.get('/health', async () => {
@@ -84,6 +87,14 @@ try {
     broadcastUpdate();
   }, 5000);
   app.log.info('Real-time updates enabled (5s interval)');
+  
+  // Generate mock data if not skipped
+  if (process.env.SKIP_MOCK_DATA !== 'true') {
+    await generateMockData();
+    app.log.info('Mock data generated');
+  } else {
+    app.log.info('Skipped mock data generation (SKIP_MOCK_DATA=true)');
+  }
 } catch (err) {
   app.log.error(err);
   process.exit(1);
